@@ -1,0 +1,462 @@
+options {
+  JAVA_UNICODE_ESCAPE = true;
+  STATIC = false;
+}
+
+PARSER_BEGIN(ParserAST)
+    package edu.purdue.cs352.minijava.parser;
+
+    import edu.purdue.cs352.minijava.ast.*;
+    import edu.purdue.cs352.minijava.*;
+    import java.util.*;
+
+    public class ParserAST {
+        public static void main(String[] args) {
+            ParserAST parser;
+
+            if (args.length != 1) {
+                System.out.println("Use: mjparse <input file>");
+                return;
+            }
+
+            try {
+                parser = new ParserAST(new java.io.FileInputStream(args[0]));
+            } catch (java.io.FileNotFoundException ex) {
+                System.out.println("File " + args[0] + " not found.");
+                return;
+            }
+
+            try {
+                parser.Program();
+            } catch (ParseException ex) {
+                System.out.println(ex.getMessage());
+                return;
+            }
+        }
+    }
+
+PARSER_END(ParserAST)
+
+// Lexical definitions
+
+// Whitespace
+SKIP :
+{
+    " " | "\t" | "\n" | "\r" | "\f"
+}
+
+// Comments
+SKIP :
+{
+    < "//" (~["\n"])* "\n" >
+|   < "/*"(~["*"] | ("*")+~["*"]~["/"])* ("*")+"/" >
+}
+
+// MiniJava keywords
+TOKEN :
+{
+    < KW_CLASS: "class" >
+|   < KW_PUBLIC:    "public">
+|   < KW_STATIC:    "static">
+|   < KW_VOID:      "void"  >
+|   < KW_MAIN:      "main"  >
+|   < KW_STRING:    "String">
+|   < KW_EXTENDS:   "extends">
+|   < KW_RETURN:    "return">
+|   < KW_INT:       "int"   >
+|   < KW_BOOLEAN:   "boolean">
+|   < KW_IF:        "if"    >
+|   < KW_ELSE:      "else"  >
+|   < KW_WHILE:     "while" >
+|   < KW_TRUE:      "true"  >
+|   < KW_FALSE:     "false" >
+|   < KW_THIS:      "this"  >
+|   < KW_NEW:       "new"   >
+|   < KW_PRINT:     "System.out.println">
+}
+
+// MiniJava symbols
+TOKEN :
+{
+    < SYM_LBRACE: "{" >
+|   < SYM_RBRACE: "}" >
+|   < SYM_LPARENTHESE: "(" >
+|   < SYM_RPARENTHESE: ")" >
+|   < SYM_LBRACKET: "[" >
+|   < SYM_RBRACKET: "]" >
+|   < SYM_SEMICOLON: ";" >
+|   < SYM_EQUAL: "=" >
+|   < SYM_AND: "&&" >
+|   < SYM_OR: "||" >
+|   < SYM_LESS: "<" >
+|   < SYM_LESSEQUAL: "<=" >
+|   < SYM_EQUALEQUAL: "==" >
+|   < SYM_NOTEQUAL: "!=" >
+|   < SYM_GREATER: ">" >
+|   < SYM_GREATEREQUAL: ">=" >
+|   < SYM_PLUS: "+" >
+|   < SYM_MINUS: "-" >
+|   < SYM_MULTIPLICATION: "*" >
+|   < SYM_DIVIDE: "/" >
+|   < SYM_MOD: "%" >
+|   < SYM_NOT: "!" >
+|   < SYM_DOT: "." >
+|   < SYM_COMMA: "," >
+}
+
+// Identifiers
+TOKEN :
+{
+    < IDENTIFIER: ["A"-"Z","a"-"z","_"](["A"-"Z","a"-"z","0"-"9","_"])* >
+}
+
+// Integer literals
+TOKEN :
+{
+    < INT_LITERAL: (["0"-"9"])+ >
+}
+
+/* The following is a simple grammar that will allow you to test the generated
+ * lexer. */
+List<Token> TokenList() :
+{
+    Token t;
+    List<Token> tl = new ArrayList<Token>();
+}
+{
+
+    (
+        t = Token()
+        { tl.add(t); }
+    )*
+    <EOF>
+    { return tl; }
+}
+
+Token Token():
+{}
+{
+    (
+    "class"
+|   "public"
+|   "static"
+|   "void"
+|   "main"
+|   "String"
+|   "extends"
+|   "return"
+|   "int"
+|   "boolean"
+|   "if"
+|   "else"
+|   "while"
+|   "true"
+|   "false"
+|   "this"
+|   "new"
+|   "System.out.println"
+|   "{"
+|   "}"
+|   "("
+|   ")"
+|   "["
+|   "]"
+|   ";"
+|   "="
+|   "&&"
+|   "||"
+|   "<"
+|   "<="
+|   "=="
+|   "!="
+|   ">"
+|   ">="
+|   "+"
+|   "-"
+|   "*"
+|   "/"
+|   "%"
+|   "!"
+|   "."
+|   ","
+|   <IDENTIFIER>
+|   <INT_LITERAL>
+    )
+    { return token; }
+}
+
+// Grammar
+Program Program():
+{
+    Main main;
+    List<ClassDecl> cds = new ArrayList<ClassDecl>();
+    ClassDecl temp;
+}
+{
+    (
+    main = MainClass()
+    (temp = ClassDeclaration(){cds.add(temp);})*
+    <EOF>
+    )
+    {return new Program(new Token(), main, cds);}
+}
+
+Main MainClass():
+{
+    Statement statement;
+    Token tok;
+}
+{
+    (
+    tok = <KW_CLASS> <IDENTIFIER>
+    <SYM_LBRACE>
+        <KW_PUBLIC> <KW_STATIC> <KW_VOID> <KW_MAIN> <SYM_LPARENTHESE> <KW_STRING> <SYM_LBRACKET> <SYM_RBRACKET> <IDENTIFIER> <SYM_RPARENTHESE>
+        <SYM_LBRACE>
+            statement = Statement()
+        <SYM_RBRACE>
+    <SYM_RBRACE>
+    )
+    {return new Main(tok, statement);}
+}
+
+ClassDecl ClassDeclaration():
+{
+    Token clas, tok;
+    String name = null, eggstends = null;
+    VarDecl t1;
+    MethodDecl t2;
+    List<VarDecl> fields = new ArrayList<VarDecl>();
+    List<MethodDecl> methods = new ArrayList<MethodDecl>();
+}
+{
+    (
+    clas = <KW_CLASS> tok = <IDENTIFIER>{name = tok.toString();} (<KW_EXTENDS> tok = <IDENTIFIER>{eggstends = tok.toString();})? <SYM_LBRACE> (t1 = VarDeclaration(){fields.add(t1);})* (t2 = MethodDeclaration(){methods.add(t2);})* <SYM_RBRACE>
+    )
+    {return new ClassDecl(clas, name, eggstends, fields, methods);}
+}
+
+VarDecl VarDeclaration():
+{
+    Token tok;
+    Type type;
+    String name;
+}
+{
+    (
+    type = Type() tok = <IDENTIFIER> <SYM_SEMICOLON>
+    )
+    {return new VarDecl(tok, type, tok.toString());}
+}
+
+MethodDecl MethodDeclaration():
+{
+    Token tok, temp_tok;
+    Type retType, temp_type;
+    String name;
+    Parameter t1;
+    VarDecl   t2;
+    Statement t3;
+    List<Parameter> parameters = new ArrayList<Parameter>();
+    List<VarDecl> vds = new ArrayList<VarDecl>();
+    List<Statement> body = new ArrayList<Statement>();
+    Exp retExp;
+}
+{
+    (
+    <KW_PUBLIC> retType = Type() tok = <IDENTIFIER>{name = tok.toString();} <SYM_LPARENTHESE> (temp_type = Type() temp_tok = <IDENTIFIER>{parameters.add(new Parameter(new Token(),temp_type, temp_tok.toString()));} (<SYM_COMMA> temp_type = Type() temp_tok = <IDENTIFIER>{parameters.add(new Parameter(new Token(),temp_type, temp_tok.toString()));})*)? <SYM_RPARENTHESE> <SYM_LBRACE>
+        ( LOOKAHEAD(2) t2 = VarDeclaration(){vds.add(t2);} | t3 = Statement(){body.add(t3);} )*
+        <KW_RETURN> retExp = Expression() <SYM_SEMICOLON> 
+        <SYM_RBRACE> 
+    )
+    {return new MethodDecl(tok, retType, name, parameters, vds, body, retExp);}
+}
+
+Type Type():
+{
+    Token tok;
+}
+{
+    tok = <KW_INT> ( <SYM_LBRACKET>  <SYM_RBRACKET>{return new TypeIntArray(tok);})?
+    {return new TypeInt(tok);}
+    |tok = <KW_BOOLEAN> {return new TypeBoolean(tok);}
+    |tok = <IDENTIFIER> {return new Type(tok, tok.toString());}
+}
+
+Statement Statement():
+{
+    Token tok;
+    List<Statement> body = new ArrayList<Statement>();
+    Statement s = null, ifS = null, elseS = null , t;
+    Exp exp;
+}
+{
+    (
+    tok = <SYM_LBRACE> (t = Statement(){body.add(t);})* < SYM_RBRACE>
+        {s = new BlockStatement(tok, body);}
+    |tok = <KW_IF> <SYM_LPARENTHESE> exp = Expression() <SYM_RPARENTHESE> ifS = Statement() (LOOKAHEAD(2) <KW_ELSE> elseS = Statement())? 
+        {s = new IfStatement(tok, exp, ifS, elseS);}
+    |tok = <KW_WHILE> <SYM_LPARENTHESE> exp = Expression() <SYM_RPARENTHESE> s = Statement()
+        {s = new WhileStatement(tok, exp, s);}
+    |tok = <KW_PRINT> <SYM_LPARENTHESE> exp = Expression() <SYM_RPARENTHESE> <SYM_SEMICOLON>
+        {s = new PrintStatement(tok, exp);}
+    |exp = Expression() <SYM_SEMICOLON>
+        {s = new ExpStatement(new Token(), exp);}
+    )
+    {return s;}
+}
+
+Exp Expression():
+{
+    Exp exp = null;
+}
+{
+    (
+    exp = AssignExpr()
+    )
+    {return exp;}
+}
+
+Exp AssignExpr():
+{
+    Exp target, value;
+}
+{
+    target = LogicOp() (<SYM_EQUAL> value = AssignExpr(){return new AssignExp(new Token(), target ,value);})?
+    {return target;}    
+}
+
+Exp LogicOp():
+{
+    Exp left;
+    Exp right;
+    Token tok;
+}
+{
+    (
+        left = CmpOp() 
+        (
+            (tok = <SYM_AND> | tok = <SYM_OR>) right = CmpOp() 
+            { left = new BinaryExp(left, tok, right);}
+        )*
+    )
+        {return left;}
+}
+
+Exp CmpOp():
+{
+    Exp left;
+    Exp right;
+    Token tok;
+}
+{
+    (
+        left = AddOp()  (
+            (tok = <SYM_LESS> | tok = <SYM_LESSEQUAL> | tok = <SYM_NOTEQUAL> | tok = <SYM_GREATER> | tok = <SYM_GREATEREQUAL>) right = AddOp()
+            {left = new BinaryExp(left, tok, right);}
+        )*
+    )
+    {return left;}
+}
+
+Exp AddOp():
+{
+    Exp left;
+    Exp right;
+    Token tok;
+}
+{
+    (
+        left = MulOp() 
+        (
+            (tok = <SYM_PLUS> | tok = <SYM_MINUS>) right = MulOp()
+            {left = new BinaryExp(left, tok, right);}
+        )*
+    )
+    {return left;}
+}
+
+Exp MulOp():
+{
+    Exp left;
+    Exp right;
+    Token tok;
+}
+{
+    (
+        left = UnaryOp() 
+        (
+            (tok = <SYM_MULTIPLICATION> | tok = <SYM_DIVIDE> | tok = <SYM_MOD>) right = UnaryOp()
+            {left = new BinaryExp(left, tok, right);}
+        )*
+
+    )   
+    {return left;}
+}
+
+Exp UnaryOp():
+{
+    Exp sub;
+    Token tok;
+}
+{
+    (
+        tok = <SYM_NOT> sub = UnaryOp() {return new NotExp(tok, sub);} |  sub = PostfixOp() 
+    )
+    {return sub;}
+}
+
+Exp PostfixOp():
+{
+    Exp target, sub, t;
+    Token tok = null;
+    String method;
+    List<Exp> arguments = new ArrayList<Exp>();
+}
+{
+    (
+        target = PrimaryExp()
+        (   
+            (
+                <SYM_LBRACKET> sub = Expression() <SYM_RBRACKET> {target = new IndexExp(tok, target, sub);}
+                | LOOKAHEAD(3)<SYM_DOT> tok = Identifier() {method = tok.toString();} 
+                <SYM_LPARENTHESE> (t = Expression(){arguments.add(t);} (<SYM_COMMA> t = Expression(){arguments.add(t);})*)? <SYM_RPARENTHESE> {target = new CallExp(tok, target, method, arguments);}
+                | <SYM_DOT> tok = Identifier() {target = new MemberExp(tok, target ,tok.toString());}
+            )
+        )*
+    )
+    {return target;}
+}
+
+Exp PrimaryExp():
+{
+    Exp size, exp;
+    Token tok;
+}
+{
+    tok = <INT_LITERAL> 
+        {return new IntLiteralExp(tok, Integer.parseInt(tok.toString()));}
+    | tok = <KW_TRUE> 
+        {return new BooleanLiteralExp(tok, true);}
+    | tok = <KW_FALSE> 
+        {return new BooleanLiteralExp(tok, false);}
+    | tok = Identifier() 
+        {return new VarExp(tok, tok.toString());}
+    | tok = <KW_THIS> 
+        {return new ThisExp(tok);}
+    | LOOKAHEAD(2)<KW_NEW> <KW_INT> <SYM_LBRACKET> size = Expression() <SYM_RBRACKET>
+        {return new NewIntArrayExp(new Token(), size);}
+    | <KW_NEW> tok = Identifier() <SYM_LPARENTHESE> <SYM_RPARENTHESE>
+        {return new NewObjectExp(tok, tok.toString());}
+    | <SYM_LPARENTHESE> exp = Expression() <SYM_RPARENTHESE> 
+        {return exp;}
+}
+
+Token Identifier():
+{Token t1 = null;}
+{
+    t1 = <IDENTIFIER>
+    //{System.out.println(t1.toString());}
+    {return t1;}
+}
+
+

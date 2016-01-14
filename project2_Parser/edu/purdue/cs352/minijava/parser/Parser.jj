@@ -1,0 +1,391 @@
+options {
+  JAVA_UNICODE_ESCAPE = true;
+  STATIC = false;
+}
+
+PARSER_BEGIN(Parser)
+    package edu.purdue.cs352.minijava.parser;
+
+    import java.util.*;
+
+    public class Parser {
+        public static void main(String[] args) {
+            Parser parser;
+
+            if (args.length != 1) {
+                System.out.println("Use: mjparse <input file>");
+                return;
+            }
+
+            try {
+                parser = new Parser(new java.io.FileInputStream(args[0]));
+            } catch (java.io.FileNotFoundException ex) {
+                System.out.println("File " + args[0] + " not found.");
+                return;
+            }
+
+            try {
+                parser.Program();
+            } catch (ParseException ex) {
+                System.out.println(ex.getMessage());
+                return;
+            }
+        }
+    }
+
+PARSER_END(Parser)
+
+// Lexical definitions
+
+// Whitespace
+SKIP :
+{
+    " " | "\t" | "\n" | "\r" | "\f"
+}
+
+// Comments
+SKIP :
+{
+    < "//" (~["\n"])* "\n" >
+|   < "/*"(~["*"] | ("*")+~["*"]~["/"])* ("*")+"/" >
+}
+
+// MiniJava keywords
+TOKEN :
+{
+    < KW_CLASS: "class" >
+|   < KW_PUBLIC:    "public">
+|   < KW_STATIC:    "static">
+|   < KW_VOID:      "void"  >
+|   < KW_MAIN:      "main"  >
+|   < KW_STRING:    "String">
+|   < KW_EXTENDS:   "extends">
+|   < KW_RETURN:    "return">
+|   < KW_INT:       "int"   >
+|   < KW_BOOLEAN:   "boolean">
+|   < KW_IF:        "if"    >
+|   < KW_ELSE:      "else"  >
+|   < KW_WHILE:     "while" >
+|   < KW_TRUE:      "true"  >
+|   < KW_FALSE:     "false" >
+|   < KW_THIS:      "this"  >
+|   < KW_NEW:       "new"   >
+|   < KW_PRINT:     "System.out.println">
+}
+
+// MiniJava symbols
+TOKEN :
+{
+    < SYM_LBRACE: "{" >
+|   < SYM_RBRACE: "}" >
+|   < SYM_LPARENTHESE: "(" >
+|   < SYM_RPARENTHESE: ")" >
+|   < SYM_LBRACKET: "[" >
+|   < SYM_RBRACKET: "]" >
+|   < SYM_SEMICOLON: ";" >
+|   < SYM_EQUAL: "=" >
+|   < SYM_AND: "&&" >
+|   < SYM_OR: "||" >
+|   < SYM_LESS: "<" >
+|   < SYM_LESSEQUAL: "<=" >
+|   < SYM_EQUALEQUAL: "==" >
+|   < SYM_NOTEQUAL: "!=" >
+|   < SYM_GREATER: ">" >
+|   < SYM_GREATEREQUAL: ">=" >
+|   < SYM_PLUS: "+" >
+|   < SYM_MINUS: "-" >
+|   < SYM_MULTIPLICATION: "*" >
+|   < SYM_DIVIDE: "/" >
+|   < SYM_MOD: "%" >
+|   < SYM_NOT: "!" >
+|   < SYM_DOT: "." >
+|   < SYM_COMMA: "," >
+}
+
+// Identifiers
+TOKEN :
+{
+    < IDENTIFIER: ["A"-"Z","a"-"z","_"](["A"-"Z","a"-"z","0"-"9","_"])* >
+}
+
+// Integer literals
+TOKEN :
+{
+    < INT_LITERAL: (["0"-"9"])+ >
+}
+
+/* The following is a simple grammar that will allow you to test the generated
+ * lexer. */
+List<Token> TokenList() :
+{
+    Token t;
+    List<Token> tl = new ArrayList<Token>();
+}
+{
+
+    (
+        t = Token()
+        { tl.add(t); }
+    )*
+    <EOF>
+    { return tl; }
+}
+
+Token Token():
+{}
+{
+    (
+    "class"
+|   "public"
+|   "static"
+|   "void"
+|   "main"
+|   "String"
+|   "extends"
+|   "return"
+|   "int"
+|   "boolean"
+|   "if"
+|   "else"
+|   "while"
+|   "true"
+|   "false"
+|   "this"
+|   "new"
+|   "System.out.println"
+|   "{"
+|   "}"
+|   "("
+|   ")"
+|   "["
+|   "]"
+|   ";"
+|   "="
+|   "&&"
+|   "||"
+|   "<"
+|   "<="
+|   "=="
+|   "!="
+|   ">"
+|   ">="
+|   "+"
+|   "-"
+|   "*"
+|   "/"
+|   "%"
+|   "!"
+|   "."
+|   ","
+|   <IDENTIFIER>
+|   <INT_LITERAL>
+    )
+    { return token; }
+}
+
+// Grammar
+void Program():
+{}
+{
+    Goal()
+    {return;}
+}
+
+
+// FILLIN: Remainder of the grammar
+void Goal():
+{}
+{
+    (
+    MainClass()
+    (ClassDeclaration())*
+    <EOF>
+    )
+    {return;}
+}
+
+void MainClass():
+{}
+{
+    (
+    <KW_CLASS> <IDENTIFIER>
+    <SYM_LBRACE>
+        <KW_PUBLIC> <KW_STATIC> <KW_VOID> <KW_MAIN> <SYM_LPARENTHESE> <KW_STRING> <SYM_LBRACKET> <SYM_RBRACKET> <IDENTIFIER> <SYM_RPARENTHESE>
+        <SYM_LBRACE>
+            Statement()
+        <SYM_RBRACE>
+    <SYM_RBRACE>
+    )
+    {return;}
+}
+
+void ClassDeclaration():
+{}
+{
+    (
+    <KW_CLASS> <IDENTIFIER> (<KW_EXTENDS> <IDENTIFIER>)? <SYM_LBRACE> (VarDeclaration())* (MethodDeclaration())* <SYM_RBRACE>
+    )
+    {return;}
+}
+
+void VarDeclaration():
+{}
+{
+    (
+    Type() <IDENTIFIER> <SYM_SEMICOLON>
+    )
+    {return;}
+}
+
+void MethodDeclaration():
+{Token test = null;}
+{
+    (
+    <KW_PUBLIC> Type() <IDENTIFIER> <SYM_LPARENTHESE> (Type() <IDENTIFIER> (<SYM_COMMA> Type() <IDENTIFIER>)*)? <SYM_RPARENTHESE> <SYM_LBRACE>
+        ( LOOKAHEAD(2) VarDeclaration() | Statement() )*
+        <KW_RETURN> Expression() <SYM_SEMICOLON> 
+        <SYM_RBRACE> 
+    )
+    {return;}
+}
+
+void Type():
+{}
+{
+    (
+    <KW_INT> (<SYM_LBRACKET> <SYM_RBRACKET>)?
+    |<KW_BOOLEAN>
+    |<IDENTIFIER>
+    )
+    {return;}
+}
+
+void Statement():
+{}
+{
+    (
+    <SYM_LBRACE> (Statement())* < SYM_RBRACE>
+    |<KW_IF> <SYM_LPARENTHESE> Expression() <SYM_RPARENTHESE> Statement() (LOOKAHEAD(2) <KW_ELSE> Statement())?
+    |<KW_WHILE> <SYM_LPARENTHESE> Expression() <SYM_RPARENTHESE> Statement()
+    |<KW_PRINT> <SYM_LPARENTHESE> Expression() <SYM_RPARENTHESE> <SYM_SEMICOLON>
+    |Expression() <SYM_SEMICOLON>
+    )
+    {return;}
+}
+
+void Expression():
+{}
+{
+    (
+    AssignExpr()
+    )
+    {return;}
+}
+
+void AssignExpr():
+{}
+{
+    LogicOp() (<SYM_EQUAL> AssignExpr())?
+    {return;}    
+}
+
+void LogicOp():
+{}
+{
+    (
+        CmpOp() 
+        (
+            (<SYM_AND> | <SYM_OR>) CmpOp() 
+        )*
+    )
+    {return;}
+}
+
+void CmpOp():
+{}
+{
+    (
+        AddOp()  (
+            (<SYM_LESS> | <SYM_LESSEQUAL> | <SYM_NOTEQUAL> | <SYM_GREATER> | <SYM_GREATEREQUAL>) AddOp()
+        )*
+    )
+    {return;}
+}
+
+void AddOp():
+{}
+{
+    (
+        MulOp() 
+        (
+            (<SYM_PLUS> | <SYM_MINUS>) MulOp()
+        )*
+    )
+    {return;}
+}
+
+void MulOp():
+{}
+{
+    (
+        UnaryOp() 
+        (
+            (<SYM_MULTIPLICATION> | <SYM_DIVIDE> | <SYM_MOD>) UnaryOp()
+        )*
+
+    )
+    {return;}
+}
+
+void UnaryOp():
+{}
+{
+    (
+        <SYM_NOT> UnaryOp() | PostfixOp()
+    )
+    {return;}
+}
+
+void PostfixOp():
+{}
+{
+    (
+        PrimaryExp()
+        (   
+            (
+                <SYM_LBRACKET> Expression() <SYM_RBRACKET> 
+                | LOOKAHEAD(3)<SYM_DOT> Identifier()
+                <SYM_LPARENTHESE> (Expression() (<SYM_COMMA> Expression())*)? <SYM_RPARENTHESE> 
+                | <SYM_DOT> Identifier()
+            )
+        )*
+    )
+    {return;}
+}
+
+
+void PrimaryExp():
+{}
+{
+    (
+    <INT_LITERAL>
+    | <KW_TRUE>
+    | <KW_FALSE>
+    | Identifier()
+    | <KW_THIS>
+    | LOOKAHEAD(2)<KW_NEW> <KW_INT> <SYM_LBRACKET> Expression() <SYM_RBRACKET>
+    | <KW_NEW> Identifier() <SYM_LPARENTHESE> <SYM_RPARENTHESE>
+    | <SYM_LPARENTHESE> Expression() <SYM_RPARENTHESE>
+    )
+    {return;}
+}
+
+void Identifier():
+{Token t1 = null;}
+{
+    t1 = <IDENTIFIER>
+    //{System.out.println(t1.toString());}
+    {return;}
+}
+
+

@@ -1,0 +1,37 @@
+#!/bin/bash
+# check if there are four arguments
+./bin/mjcompile-mips examples/BinarySearch.java > test.s
+spim -file test.s > out2
+diff examples/BinarySearch.output out2
+
+./bin/mjcompile-mips examples/BinaryTree.java > test.s
+spim -file test.s > out2
+diff examples/BinaryTree.output out2
+
+./bin/mjcompile-mips examples/BubbleSort.java > test.s
+spim -file test.s > out2
+diff examples/BubbleSort.output out2
+
+./bin/mjcompile-mips examples/Factorial.java > test.s
+spim -file test.s > out2
+diff examples/Factorial.output out2
+
+./bin/mjcompile-mips examples/LinearSearch.java > test.s
+spim -file test.s > out2
+diff examples/LinearSearch.output out2
+
+./bin/mjcompile-mips examples/QuickSort.java > test.s
+spim -file test.s > out2
+diff examples/QuickSort.output out2
+
+./bin/mjcompile-mips examples/Spill.java > test.s
+spim -file test.s > out2
+diff examples/Spill.output out2
+
+./bin/mjcompile-mips examples/StackArgs.java > test.s
+spim -file test.s > out2
+diff examples/StackArgs.output out2
+
+./bin/mjcompile-mips examples/TreeVisitor.java > test.s
+spim -file test.s > out2
+diff examples/TreeVisitor.output out2
